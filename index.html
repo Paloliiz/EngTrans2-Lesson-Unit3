@@ -35,9 +35,13 @@
 
         .btn-group { display: flex; justify-content: space-between; width: 100%; margin-top: 20px; }
         
-        .btn-choice { background: white; border: 2px solid #e0e0e0; color: #444; margin-bottom: 10px; text-align: left; width: 100%; padding: 15px; border-radius: 12px; line-height: 1.4; }
+        .btn-choice { background: white; border: 2px solid #e0e0e0; color: #444; margin-bottom: 10px; text-align: left; width: 100%; padding: 15px; border-radius: 12px; line-height: 1.4; transition: 0.2s; }
         .btn-choice:hover { background: #fce4ec; border-color: #f48fb1; }
         
+        /* Disabled State for Buttons */
+        .btn-choice:disabled { opacity: 0.6; cursor: not-allowed; background: #eee; border-color: #ccc; }
+        .btn-choice.selected { border-color: #880e4f; background: #f8bbd0; }
+
         /* Content Elements */
         .content-box { width: 100%; text-align: left; margin-bottom: 20px; font-family: 'Sarabun', sans-serif; line-height: 1.7; }
         .topic-badge { background: #fce4ec; color: #880e4f; padding: 5px 10px; border-radius: 5px; font-size: 0.8em; font-weight: bold; display: inline-block; margin-bottom: 10px; }
@@ -59,6 +63,9 @@
         .cert-content { position: relative; z-index: 1; }
         .stamp { color: #c62828; border: 3px solid #c62828; display: inline-block; padding: 5px 15px; font-weight: bold; transform: rotate(-10deg); font-size: 1.5em; margin-top: 10px; opacity: 0.9; }
         .security-code { font-family: monospace; font-size: 0.8em; color: #555; background: #eee; padding: 2px 8px; border-radius: 4px; margin-top: 15px; display: inline-block; }
+
+        /* Failed Screen */
+        .failed-card { border: 2px dashed #f44336; background: #ffebee; padding: 30px; border-radius: 15px; text-align: center; margin-top: 20px; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .hidden { display: none !important; }
@@ -99,32 +106,8 @@
     </div>
 
     <div id="screen-result" class="screen">
-        <div style="margin-top:auto; margin-bottom:auto; width:100%; display:flex; flex-direction:column; align-items:center;">
-            <h2 style="color:#880e4f;">Training Complete!</h2>
-            <div class="cert-card" id="certificate">
-                <div class="watermark-bg" id="watermark-area"></div>
-                <div class="cert-content">
-                    <div style="font-size:0.8em; letter-spacing:2px; color:#666;">CERTIFICATE OF COMPLETION</div>
-                    <h3 style="margin:10px 0; font-size:1.4em; color:#880e4f;">Passive Voice Reporter</h3>
-                    <p>Presented to</p>
-                    <h2 id="cert-name" style="color:#ad1457; border-bottom:1px solid #ddd; padding-bottom:5px;">-</h2>
-                    <p id="cert-id" style="font-size:0.9em;">-</p>
-                    <div style="display:flex; justify-content:space-around; align-items:center; margin-top:15px;">
-                        <div>
-                            <div style="font-size:2em; font-weight:bold;" id="final-score">0/5</div>
-                            <div style="font-size:0.7em;">QUIZ SCORE</div>
-                        </div>
-                        <div class="stamp">PASSED</div>
-                    </div>
-                    <div style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px; font-size:0.75em; color:#444; text-align: left;">
-                        <div>📅 Date: <span id="timestamp" style="font-weight:bold;">-</span></div>
-                        <div style="text-align:center;"><span class="security-code" id="ref-code">REF: -</span></div>
-                    </div>
-                </div>
+        <div id="result-content" style="margin-top:auto; margin-bottom:auto; width:100%; display:flex; flex-direction:column; align-items:center;">
             </div>
-            <p style="font-size:0.8em; color:#888; margin-top:20px;">📸 แคปหน้าจอนี้ส่งเข้าอัลบั้มกลุ่มได้เลยค่ะ</p>
-            <button class="btn btn-primary" style="background:#444; margin-top:10px;" onclick="location.reload()">Log out</button>
-        </div>
     </div>
 </div>
 
@@ -136,80 +119,36 @@
     };
 
     const slides = [
-        {
-            type: "intro",
-            html: `
-                <div style="font-size:3em; text-align:center;">📰</div>
-                <h2 style="text-align:center;">ยินดีต้อนรับสู่กองบรรณาธิการ</h2>
-                <div class="content-box">
-                    <p>สวัสดีค่ะคุณ <b><span id="disp-name"></span></b>! <br>วันนี้คุณได้รับภารกิจให้เป็น <b>Junior Editor</b> (บรรณาธิการฝึกหัด) ประจำสำนักข่าวโรงเรียน</p>
-                    <p>ก่อนที่จะไปตรวจงานจริง เราต้องมา <b>"ติวเข้ม"</b> เรื่อง Passive Voice กันแบบเจาะลึกนะคะ</p>
-                    <div class="highlight-box">
-                        <b>⚠️ กติกาใหม่:</b> อ่านเนื้อหาให้จบ และต้องทำแบบฝึกหัดท้ายบทเรียนให้ผ่านทุกข้อ จึงจะไปต่อได้ค่ะ
-                    </div>
-                </div>
-                <div style="text-align:center;"><button class="btn btn-primary" onclick="nextSlide()">เริ่มบทเรียนที่ 1 🚀</button></div>
-            `
-        },
+        { type: "intro", html: `<div style="font-size:3em; text-align:center;">📰</div><h2 style="text-align:center;">ยินดีต้อนรับสู่กองบรรณาธิการ</h2><div class="content-box"><p>สวัสดีค่ะคุณ <b><span id="disp-name"></span></b>! <br>วันนี้คุณได้รับภารกิจให้เป็น <b>Junior Editor</b> (บรรณาธิการฝึกหัด) ประจำสำนักข่าวโรงเรียน</p><p>ก่อนที่จะไปตรวจงานจริง เราต้องมา <b>"ติวเข้ม"</b> เรื่อง Passive Voice กันแบบเจาะลึกนะคะ</p><div class="highlight-box"><b>⚠️ กติกาใหม่:</b> อ่านเนื้อหาให้จบ และต้องทำแบบฝึกหัดท้ายบทเรียนให้ผ่านทุกข้อ จึงจะไปต่อได้ค่ะ</div></div><div style="text-align:center;"><button class="btn btn-primary" onclick="nextSlide()">เริ่มบทเรียนที่ 1 🚀</button></div>` },
         
-        // --- LESSON 1: CONCEPT ---
         { type: "reading", html: `<div class="step-indicator">Lesson 1: Page 1/3</div><div class="topic-badge">1. CONCEPT</div><h3>Active Voice คืออะไร?</h3><div class="content-box"><p>ก่อนจะรู้จัก Passive เราต้องรู้จัก <b>Active Voice</b> (ประโยคเน้นประธาน) ก่อนค่ะ</p><p>คือประโยคปกติที่เราพูดกันทุกวัน ที่ <b>"ประธานเป็นคนทำกริยาเอง"</b></p><div class="example-box"><p>🔹 <b>The cat eats the fish.</b><br>(แมว กิน ปลา)</p><p>🔹 <b>Somchai drives a car.</b><br>(สมชาย ขับ รถ)</p></div><p>สังเกตว่าเราจะสนใจว่า <b>"ใคร"</b> (แมว/สมชาย) เป็นคนทำสิ่งนั้น</p></div>` },
         { type: "reading", html: `<div class="step-indicator">Lesson 1: Page 2/3</div><div class="topic-badge">1. CONCEPT</div><h3>แล้ว Passive Voice คืออะไร?</h3><div class="content-box"><p>Passive Voice คือการกลับด้านค่ะ เราจะเอา <b>"ผู้ถูกกระทำ"</b> มาไว้ข้างหน้าแทน เพื่อเน้นว่าเกิดอะไรขึ้นกับสิ่งนั้น</p><div class="example-box"><p>🔹 <b>The fish is eaten by the cat.</b><br>(ปลา ถูกกิน โดยแมว)</p></div><p><b>ทำไมต้องใช้?</b> ในการเขียนข่าว เรามักสนใจ "เหตุการณ์" มากกว่า "คนทำ" เช่น:</p><ul style="font-size:0.9em;"><li>รถถูกชน (ไม่สนว่าใครชน สนแค่รถพัง)</li><li>ธนาคารถูกปล้น (ข่าวใหญ่คือธนาคารโดนปล้น)</li></ul></div>` },
-        // L1 Quiz 1
         { type: "lesson", html: `<div class="step-indicator">Lesson 1: Quiz 1/2</div><div class="topic-badge">TEST 1</div><h3>ทดสอบความเข้าใจ</h3><div class="content-box"><p><b>คำถาม:</b> ประโยคไหนคือ Passive Voice?</p></div>`, choices: [ { txt: "Mom cooked dinner.", isCorrect: false, explain: "ผิดค่ะ อันนี้แม่ทำเอง เป็น Active Voice" }, { txt: "Dinner was cooked by Mom.", isCorrect: true, explain: "ถูกต้องค่ะ! เอา Dinner (ผู้ถูกกระทำ) ขึ้นก่อน" } ] },
-        // L1 Quiz 2
         { type: "lesson", html: `<div class="step-indicator">Lesson 1: Quiz 2/2</div><div class="topic-badge">TEST 1</div><h3>เลือกพาดหัวข่าว</h3><div class="content-box"><p><b>คำถาม:</b> ข่าว 'ธนาคารถูกปล้น' ควรพาดหัวว่า?</p></div>`, choices: [ { txt: "The robber robbed the bank.", isCorrect: false, explain: "อันนี้เน้นโจร (Active) ยังไม่เหมาะกับพาดหัวข่าวค่ะ" }, { txt: "The bank was robbed.", isCorrect: true, explain: "เยี่ยมมากค่ะ! เน้นที่ธนาคาร (Passive) ถูกต้องตามหลักการเขียนข่าว" } ] },
 
-        // --- LESSON 2: STRUCTURE ---
         { type: "reading", html: `<div class="step-indicator">Lesson 2: Page 1/3</div><div class="topic-badge">2. STRUCTURE</div><h3>โครงสร้างหัวใจสำคัญ</h3><div class="content-box"><p>จำสมการนี้ให้แม่นเลยนะคะ ถ้าขาดตัวใดตัวหนึ่งไป จะไม่ใช่ Passive Voice ทันที!</p><div class="example-box" style="text-align:center; font-size:1.3em; font-weight:bold;">BE + V.3</div><p>ต้องประกอบด้วย 2 ส่วนเสมอ:</p><ol><li><b>Verb to be:</b> (is, am, are, was, were) เพื่อบอกเวลา</li><li><b>Verb ช่อง 3:</b> (Past Participle) เพื่อบอกการกระทำ</li></ol></div>` },
         { type: "reading", html: `<div class="step-indicator">Lesson 2: Page 2/3</div><div class="topic-badge">2. STRUCTURE</div><h3>ระวัง V.3 เปลี่ยนร่าง!</h3><div class="content-box"><p>จุดที่นักเรียนพลาดบ่อยที่สุด คือใช้กริยาผิดช่องค่ะ ต้องแม่นเรื่อง V.3 นะคะ</p><table style="width:100%; border-collapse:collapse; text-align:center; font-size:0.9em;"><tr style="background:#eee;"><th>V.1 (ปกติ)</th><th>V.2 (อดีต)</th><th style="color:blue;">V.3 (Passive)</th></tr><tr><td>eat</td><td>ate</td><td style="color:blue; font-weight:bold;">eaten</td></tr><tr><td>steal</td><td>stole</td><td style="color:blue; font-weight:bold;">stolen</td></tr><tr><td>break</td><td>broke</td><td style="color:blue; font-weight:bold;">broken</td></tr><tr><td>write</td><td>wrote</td><td style="color:blue; font-weight:bold;">written</td></tr></table><p><i>*ห้ามใช้ V.1 หรือ V.2 หลัง Verb to be เด็ดขาด!</i></p></div>` },
-        // L2 Quiz 1
         { type: "lesson", html: `<div class="step-indicator">Lesson 2: Quiz 1/2</div><div class="topic-badge">TEST 2</div><h3>หาจุดผิด</h3><div class="content-box"><p><b>คำถาม:</b> ประโยคนี้ผิดตรงไหน? <br><i>"The cake eaten by him."</i></p></div>`, choices: [ { txt: "ผิดที่ eaten ต้องใช้ ate", isCorrect: false, explain: "ไม่ใช่นะคะ Passive ต้องใช้ V.3 (eaten) ถูกแล้ว แต่ยังขาดอะไรไป?" }, { txt: "ขาด Verb to be (was)", isCorrect: true, explain: "ถูกต้องค่ะ! ขาด was ประโยคที่ถูกคือ 'The cake <b>was</b> eaten.'" } ] },
-        // L2 Quiz 2
         { type: "lesson", html: `<div class="step-indicator">Lesson 2: Quiz 2/2</div><div class="topic-badge">TEST 2</div><h3>เลือก V.3 ให้ถูก</h3><div class="content-box"><p><b>คำถาม:</b> "The letter was _______." (write)</p></div>`, choices: [ { txt: "wrote", isCorrect: false, explain: "wrote เป็น V.2 (อดีต) ใช้ไม่ได้ค่ะ" }, { txt: "written", isCorrect: true, explain: "ถูกต้องค่ะ! written คือ V.3 ของ write" } ] },
 
-        // --- LESSON 3: TENSES ---
         { type: "reading", html: `<div class="step-indicator">Lesson 3: Page 1/3</div><div class="topic-badge">3. TENSES</div><h3>เลือก Be อย่างไรให้ถูกเวลา?</h3><div class="content-box"><p>Verb to be จะเปลี่ยนร่างไปตาม "เวลา" ของเหตุการณ์ค่ะ</p><p><b>1. ปัจจุบัน (Present):</b> ใช้ is / am / are</p><div class="example-box">The room <b>is</b> cleaned <u>every day</u>.<br>(ห้องถูกทำความสะอาดทุกวัน)</div><p><b>2. อดีต (Past):</b> ใช้ was / were</p><div class="example-box">The room <b>was</b> cleaned <u>yesterday</u>.<br>(ห้องถูกทำความสะอาดเมื่อวาน)</div></div>` },
         { type: "reading", html: `<div class="step-indicator">Lesson 3: Page 2/3</div><div class="topic-badge">3. TENSES</div><h3>Singular vs Plural</h3><div class="content-box"><p>นอกจากดูเวลาแล้ว ต้องดู "จำนวน" ของประธานด้วยนะคะ</p><ul><li><b>ของ 1 สิ่ง (เอกพจน์):</b> ใช้ is (ปัจจุบัน) / was (อดีต)</li><li><b>ของหลายสิ่ง (พหูพจน์):</b> ใช้ are (ปัจจุบัน) / were (อดีต)</li></ul><div class="highlight-box">⚠️ ระวัง! Two thieves (โจร 2 คน) <b>were</b> arrested.<br>(ห้ามใช้ was เพราะโจรมีหลายคน)</div></div>` },
-        // L3 Quiz 1
         { type: "lesson", html: `<div class="step-indicator">Lesson 3: Quiz 1/2</div><div class="topic-badge">TEST 3</div><h3>ทดสอบเรื่องเวลา</h3><div class="content-box"><p><b>คำถาม:</b> เติมคำในช่องว่าง <br><i>"The phone _____ stolen <u>yesterday</u>."</i></p></div>`, choices: [ { txt: "is", isCorrect: false, explain: "ผิดค่ะ yesterday เป็นอดีต จะใช้ is ไม่ได้นะคะ" }, { txt: "was", isCorrect: true, explain: "ถูกต้องค่ะ! yesterday เป็นอดีต และ phone มีเครื่องเดียว ใช้ was ค่ะ" } ] },
-        // L3 Quiz 2
         { type: "lesson", html: `<div class="step-indicator">Lesson 3: Quiz 2/2</div><div class="topic-badge">TEST 3</div><h3>ทดสอบเรื่องจำนวน</h3><div class="content-box"><p><b>คำถาม:</b> "Two windows ______ broken." (เหตุการณ์จบไปแล้ว)</p></div>`, choices: [ { txt: "was", isCorrect: false, explain: "หน้าต่าง 2 บาน เป็นพหูพจน์ ห้ามใช้ was ค่ะ" }, { txt: "were", isCorrect: true, explain: "เก่งมากค่ะ! พหูพจน์ + อดีต ใช้ were" } ] },
 
-
-        // --- LESSON 4: AGENT ---
         { type: "reading", html: `<div class="step-indicator">Lesson 4: Page 1/2</div><div class="topic-badge">4. AGENT</div><h3>By... (โดยใคร?)</h3><div class="content-box"><p>ใน Passive Voice ถ้าเราอยากระบุตัวคนทำ เราจะใช้คำว่า <b>by</b> ต่อท้ายประโยค</p><div class="example-box">The window was broken <b>by the ball</b>.<br>(หน้าต่างถูกทำแตก โดยลูกบอล)</div><p>ข้อควรจำ: ต้องใช้ <b>by</b> เท่านั้น ห้ามใช้ with หรือ from ในกรณีระบุผู้กระทำ</p></div>` },
         { type: "reading", html: `<div class="step-indicator">Lesson 4: Page 2/2</div><div class="topic-badge">4. AGENT</div><h3>ละเว้นได้ไหม?</h3><div class="content-box"><p>ได้ค่ะ! และนิยมทำกันมากในข่าวด้วย เราจะไม่ใส่ by เมื่อ:</p><ol><li><b>ไม่รู้ว่าใครทำ:</b> My wallet was stolen. (ไม่รู้ใครขโมย)</li><li><b>ไม่สำคัญ / รู้กันอยู่แล้ว:</b> The thief was arrested. (รู้กันอยู่แล้วว่าตำรวจจับ ไม่ต้องบอกว่า by police)</li></ol></div>` },
-        // L4 Quiz 1
         { type: "lesson", html: `<div class="step-indicator">Lesson 4: Quiz 1/2</div><div class="topic-badge">TEST 4</div><h3>การใช้ By</h3><div class="content-box"><p><b>คำถาม:</b> ประโยคไหนเขียนถูกต้อง?</p></div>`, choices: [ { txt: "The window was broken by the ball.", isCorrect: true, explain: "ถูกต้องค่ะ! ใช้ by เพื่อบอกสาเหตุว่าบอลทำแตก" }, { txt: "The window was broken with the ball.", isCorrect: false, explain: "ผิดค่ะ ใน Passive Voice เราใช้ by บอกผู้กระทำ ไม่ใช่ with นะคะ" } ] },
-        // L4 Quiz 2
         { type: "lesson", html: `<div class="step-indicator">Lesson 4: Quiz 2/2</div><div class="topic-badge">TEST 4</div><h3>การละเว้น By</h3><div class="content-box"><p><b>คำถาม:</b> ประโยคไหน <u>ไม่จำเป็น</u> ต้องใส่ by someone?</p></div>`, choices: [ { txt: "This picture was painted by Picasso.", isCorrect: false, explain: "Picasso สำคัญค่ะ ต้องใส่เพื่อให้รู้ว่าใครวาด" }, { txt: "My shoes were stolen by someone.", isCorrect: true, explain: "ถูกต้องค่ะ! by someone ไม่ได้ให้ข้อมูลเพิ่ม ตัดออกได้เลยว่า 'My shoes were stolen.'" } ] },
 
-        // --- LESSON 5: TRANSLATION ---
         { type: "reading", html: `<div class="step-indicator">Lesson 5: Page 1/2</div><div class="topic-badge">5. TRANSLATION</div><h3>ศิลปะการแปล</h3><div class="content-box"><p>หลายคนชอบแปล Passive Voice ว่า "ถูก..." ตลอด ซึ่งในภาษาไทยมันฟังดูแปลกๆ ในบางบริบทค่ะ</p><p><b>❌ กรณีใช้ "ถูก / โดน":</b> ใช้กับเรื่องไม่ดี</p><ul><li>ถูกทำโทษ (punished)</li><li>ถูกขโมย (stolen)</li><li>ถูกรถชน (hit)</li></ul></div>` },
         { type: "reading", html: `<div class="step-indicator">Lesson 5: Page 2/2</div><div class="topic-badge">5. TRANSLATION</div><h3>เรื่องดีๆ ต้อง "ได้รับ"</h3><div class="content-box"><p>ถ้าเป็นเรื่องดี หรือเป็นทางการ เราจะเลี่ยงคำว่าถูก ให้ใช้คำว่า:</p><div class="highlight-box"><b>✅ ได้รับ / ได้รับการ</b></div><p>ตัวอย่าง:</p><ul><li>She was invited. = เธอ <b>ได้รับเชิญ</b> (ไม่ใช่ ถูกเชิญ)</li><li>He was elected. = เขา <b>ได้รับเลือก</b> (ไม่ใช่ ถูกเลือก)</li></ul></div>` },
-        // L5 Quiz 1
         { type: "lesson", html: `<div class="step-indicator">Lesson 5: Quiz 1/2</div><div class="topic-badge">TEST 5</div><h3>แปลคำว่า 'Promoted'</h3><div class="content-box"><p><b>คำถาม:</b> "She was promoted." (ได้เลื่อนตำแหน่ง) ควรแปลว่า?</p></div>`, choices: [ { txt: "เธอถูกเลื่อนตำแหน่ง", isCorrect: false, explain: "ฟังดูเหมือนโดนลงโทษเลยค่ะ เลื่อนตำแหน่งเป็นเรื่องดีนะคะ!" }, { txt: "เธอได้รับการเลื่อนตำแหน่ง", isCorrect: true, explain: "ถูกต้องค่ะ! เรื่องดีๆ ใช้ 'ได้รับ' ค่ะ" } ] },
-        // L5 Quiz 2
         { type: "lesson", html: `<div class="step-indicator">Lesson 5: Quiz 2/2</div><div class="topic-badge">TEST 5</div><h3>แปลคำว่า 'Hit'</h3><div class="content-box"><p><b>คำถาม:</b> "The dog was hit by a car." ควรแปลว่า?</p></div>`, choices: [ { txt: "สุนัขได้รับชนจากรถยนต์", isCorrect: false, explain: "โอ้โฮ! ฟังดูสุภาพเกินไปสำหรับอุบัติเหตุค่ะ" }, { txt: "สุนัขถูกรถชน", isCorrect: true, explain: "ถูกต้องค่ะ! อุบัติเหตุเป็นเรื่องร้าย ใช้ 'ถูก' เหมาะสมที่สุด" } ] },
 
-        // --- FINAL QUIZ INTRO ---
-        {
-            type: "quiz-intro",
-            html: `
-                <div style="font-size:3em; text-align:center;">📝</div>
-                <h2 style="text-align:center;">Final Quiz</h2>
-                <div class="content-box">
-                    <p>ยินดีด้วย! คุณผ่านบทเรียนอันเข้มข้นมาได้</p>
-                    <p>ต่อไปจะเป็น <b>แบบทดสอบจริง 5 ข้อ</b> (เก็บคะแนน)</p>
-                    <div class="highlight-box">
-                        <b>คำเตือน:</b> คะแนนจะถูกรีเซ็ตใหม่ทุกครั้งที่เริ่มทำข้อสอบชุดนี้ พยายามทำคะแนนให้เต็มเพื่อใบประกาศที่สวยงามนะคะ!
-                    </div>
-                </div>
-                <div style="text-align:center;"><button class="btn btn-primary" onclick="nextSlide()">เริ่มทำข้อสอบ</button></div>
-            `
-        },
-        // --- QUIZ SECTION (Scored) ---
+        { type: "quiz-intro", html: `<div style="font-size:3em; text-align:center;">📝</div><h2 style="text-align:center;">Final Quiz</h2><div class="content-box"><p>ยินดีด้วย! คุณผ่านบทเรียนอันเข้มข้นมาได้</p><p>ต่อไปจะเป็น <b>แบบทดสอบจริง 5 ข้อ</b> (เก็บคะแนน)</p><div class="highlight-box"><b>คำเตือน:</b><br>1. ต้องทำได้ <b>5/5 คะแนนเต็ม</b> เท่านั้นจึงจะผ่าน<br>2. ตอบผิด = เริ่มใหม่<br>3. ห้ามกดมั่ว (ปุ่มจะถูกล็อกเมื่อเลือกแล้ว)</div></div><div style="text-align:center;"><button class="btn btn-primary" onclick="nextSlide()">เริ่มทำข้อสอบ</button></div>` },
+        
+        // --- FINAL QUIZ ---
         { type: "quiz", q: "1. The letter ______ sent yesterday.", options: ["is", "was", "were"], ans: 1, explain: "Yesterday (อดีต) + Letter (เอกพจน์) = was" },
         { type: "quiz", q: "2. The homework ______ done by the students.", options: ["was", "were", "is"], ans: 0, explain: "Homework (นับไม่ได้/เอกพจน์) + done (V.3) = was" },
         { type: "quiz", q: "3. Choose the correct V.3: 'The car was ____.'", options: ["stole", "stealing", "stolen"], ans: 2, explain: "Passive ต้องใช้ V.3 เท่านั้น (steal -> stole -> stolen)" },
@@ -246,17 +185,16 @@
         }
 
         const slide = slides[currentSlideIndex];
-        container.innerHTML = ""; // Clear content
+        container.innerHTML = ""; 
 
         // Check if reset needed (Entering Quiz Phase)
         if (slide.type === 'quiz-intro') {
-            score = 0; // Reset score before quiz starts
+            score = 0; 
         }
 
-        // GENERATE HTML CONTENT
         let contentHtml = "";
         
-        // 1. Reading Slides
+        // Reading Slides
         if (slide.type === 'reading') {
             contentHtml = slide.html + `
                 <div class="btn-group">
@@ -265,22 +203,21 @@
                 </div>
             `;
         }
-        // 2. Intro Text Slides
+        // Intro Text Slides
         else if (slide.type === 'intro' || slide.type === 'quiz-intro') {
             contentHtml = slide.html;
-            // Add back button for quiz-intro only
             if(slide.type === 'quiz-intro') {
                  contentHtml += `<div style="text-align:center; margin-top:10px;"><button class="btn btn-secondary" onclick="prevSlide()" style="background:transparent; border:none;">⬅️ ทบทวนบทเรียน</button></div>`;
             }
         }
-        // 3. Interactive Lessons (Checkpoints)
+        // Lessons (Checkpoints)
         else if (slide.type === 'lesson') {
             contentHtml = slide.html + `<div id="choice-area"></div>`;
             if (currentSlideIndex > 0) {
                 contentHtml += `<div style="margin-top:20px;"><button class="btn btn-secondary" onclick="prevSlide()" style="font-size:0.8em; padding:8px 15px;">⬅️ ย้อนกลับไปอ่าน</button></div>`;
             }
         }
-        // 4. Final Quiz
+        // Final Quiz
         else if (slide.type === 'quiz') {
             contentHtml = `
                 <div style="text-align:right; font-size:0.8em; color:#999; margin-bottom:10px;">Question ${currentSlideIndex - 21}/5</div>
@@ -292,17 +229,15 @@
 
         container.innerHTML = contentHtml;
 
-        // Inject Dynamic Name
         if(document.getElementById('disp-name')) document.getElementById('disp-name').innerText = currentUser.name.split(' ')[0];
 
-        // Generate Buttons for Lessons/Quiz
         if (slide.type === 'lesson' || slide.type === 'quiz') {
             const choiceArea = document.getElementById(slide.type === 'lesson' ? 'choice-area' : 'quiz-options');
             slide.choices?.forEach(c => {
-                createButton(choiceArea, c.txt, () => checkLessonAnswer(c.isCorrect, c.explain));
+                createButton(choiceArea, c.txt, (btn) => checkLessonAnswer(c.isCorrect, c.explain, btn));
             });
             slide.options?.forEach((opt, idx) => {
-                createButton(choiceArea, opt, () => checkQuiz(idx));
+                createButton(choiceArea, opt, (btn) => checkQuiz(idx, btn));
             });
         }
         
@@ -313,29 +248,56 @@
         const btn = document.createElement('button');
         btn.className = 'btn btn-choice';
         btn.innerHTML = text;
-        btn.onclick = onClick;
+        btn.onclick = () => onClick(btn);
         parent.appendChild(btn);
     }
 
-    function checkLessonAnswer(isCorrect, explanation) {
-        showFeedback(isCorrect, explanation, isCorrect ? "บทเรียนถัดไป ➡️" : "ลองใหม่ ↺", isCorrect ? nextSlide : null);
+    function disableAllButtons() {
+        const btns = document.querySelectorAll('.btn-choice');
+        btns.forEach(b => {
+            b.disabled = true;
+        });
     }
 
-    function checkQuiz(selectedIdx) {
+    function checkLessonAnswer(isCorrect, explanation, clickedBtn) {
+        disableAllButtons(); // Lock buttons
+        if(isCorrect) clickedBtn.style.background = "#c8e6c9";
+        else clickedBtn.style.background = "#ffcdd2";
+
+        showFeedback(isCorrect, explanation, isCorrect ? "ข้อถัดไป ➡️" : "ลองใหม่ ↺", isCorrect ? nextSlide : () => {
+            document.getElementById('feedback').classList.remove('show');
+            // Re-enable for retry
+            const btns = document.querySelectorAll('.btn-choice');
+            btns.forEach(b => {
+                b.disabled = false;
+                b.style.background = "white";
+            });
+        });
+    }
+
+    function checkQuiz(selectedIdx, clickedBtn) {
+        disableAllButtons(); // Lock immediately
         const slide = slides[currentSlideIndex];
         const isCorrect = (selectedIdx === slide.ans);
-        if(isCorrect) score++;
+        
+        if(isCorrect) {
+            score++;
+            clickedBtn.style.background = "#c8e6c9";
+        } else {
+            clickedBtn.style.background = "#ffcdd2";
+        }
+
         showFeedback(isCorrect, isCorrect ? "เยี่ยมมากค่ะ! " + slide.explain : "ข้อนี้ผิดค่ะ " + slide.explain, "ข้อถัดไป ➡️", nextSlide);
     }
 
     function showFeedback(isCorrect, detailText, btnText, callback) {
         const feedback = document.getElementById('feedback');
-        document.getElementById('feedback-text').innerText = isCorrect ? "🎉 ถูกต้องค่ะ!" : (callback ? "บันทึกคำตอบแล้ว" : "❌ ยังไม่ใช่นะคะ");
+        document.getElementById('feedback-text').innerText = isCorrect ? "🎉 ถูกต้องค่ะ!" : "❌ ยังไม่ใช่นะคะ";
         document.getElementById('feedback-detail').innerHTML = detailText;
         const btn = document.getElementById('btn-feedback-action');
         btn.innerText = btnText;
         
-        btn.onclick = callback ? callback : () => feedback.classList.remove('show');
+        btn.onclick = callback;
         feedback.className = `feedback-popup ${isCorrect ? 'correct-bg' : 'wrong-bg'}`;
         feedback.classList.add('show');
     }
@@ -356,22 +318,67 @@
         document.getElementById('screen-slide').classList.remove('active');
         document.getElementById('screen-result').classList.add('active');
         
-        document.getElementById('cert-name').innerText = currentUser.name;
-        document.getElementById('cert-id').innerText = `${currentUser.class} | No.${currentUser.no} | ID: ${currentUser.id}`;
-        document.getElementById('final-score').innerText = `${score}/5`;
+        const resultContent = document.getElementById('result-content');
         
-        const now = new Date();
-        document.getElementById('timestamp').innerText = now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH');
-        document.getElementById('ref-code').innerText = "REF: " + `${currentUser.id}-${score}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        // Strict Scoring Logic
+        if (score === 5) {
+            // PASS
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH');
+            const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+            const ref = `${currentUser.id}-${score}-${randomCode}`;
 
-        const wmArea = document.getElementById('watermark-area');
-        wmArea.innerHTML = "";
-        const wmText = `${currentUser.id} ${currentUser.name}`;
-        for(let i=0; i<30; i++) {
-            const div = document.createElement('div');
-            div.className = 'watermark-text';
-            div.innerText = wmText;
-            wmArea.appendChild(div);
+            resultContent.innerHTML = `
+                <h2 style="color:#880e4f;">Training Complete!</h2>
+                <div class="cert-card" id="certificate">
+                    <div class="watermark-bg" id="watermark-area"></div>
+                    <div class="cert-content">
+                        <div style="font-size:0.8em; letter-spacing:2px; color:#666;">CERTIFICATE OF COMPLETION</div>
+                        <h3 style="margin:10px 0; font-size:1.4em; color:#880e4f;">Passive Voice Reporter</h3>
+                        <p>Presented to</p>
+                        <h2 id="cert-name" style="color:#ad1457; border-bottom:1px solid #ddd; padding-bottom:5px;">${currentUser.name}</h2>
+                        <p id="cert-id" style="font-size:0.9em;">${currentUser.class} | No.${currentUser.no} | ID: ${currentUser.id}</p>
+                        <div style="display:flex; justify-content:space-around; align-items:center; margin-top:15px;">
+                            <div>
+                                <div style="font-size:2em; font-weight:bold;" id="final-score">${score}/5</div>
+                                <div style="font-size:0.7em;">QUIZ SCORE</div>
+                            </div>
+                            <div class="stamp">PASSED</div>
+                        </div>
+                        <div style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px; font-size:0.75em; color:#444; text-align: left;">
+                            <div>📅 Date: <span style="font-weight:bold;">${dateStr}</span></div>
+                            <div style="text-align:center;"><span class="security-code">REF: ${ref}</span></div>
+                        </div>
+                    </div>
+                </div>
+                <p style="font-size:0.8em; color:#888; margin-top:20px;">📸 แคปหน้าจอนี้ส่งเข้าอัลบั้มกลุ่มได้เลยค่ะ</p>
+                <button class="btn btn-primary" style="background:#444; margin-top:10px;" onclick="location.reload()">Log out</button>
+            `;
+
+            // Watermark Gen
+            const wmArea = document.getElementById('watermark-area');
+            const wmText = `${currentUser.id} ${currentUser.name}`;
+            for(let i=0; i<30; i++) {
+                const div = document.createElement('div');
+                div.className = 'watermark-text';
+                div.innerText = wmText;
+                wmArea.appendChild(div);
+            }
+
+        } else {
+            // FAIL
+            resultContent.innerHTML = `
+                <div class="failed-card">
+                    <div style="font-size:4em;">😢</div>
+                    <h2 style="color:#c62828;">Mission Failed</h2>
+                    <p style="font-size:1.2em; font-weight:bold;">คะแนนของคุณ: ${score}/5</p>
+                    <p style="color:#555;">คุณยังไม่ผ่านเกณฑ์การประเมิน<br>ต้องได้คะแนน <b>5/5</b> เท่านั้นถึงจะผ่านค่ะ</p>
+                    <div style="margin-top:20px;">
+                        <button class="btn btn-primary" onclick="location.reload()">↺ เริ่มทำข้อสอบใหม่</button>
+                    </div>
+                </div>
+                <p style="font-size:0.8em; color:#888; margin-top:20px;">สู้ๆ นะคะ ลองทบทวนเนื้อหาแล้วมาสอบใหม่!</p>
+            `;
         }
     }
 </script>
